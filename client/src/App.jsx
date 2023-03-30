@@ -6,6 +6,7 @@ import server from "./server";
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { utf8ToBytes, toHex } from 'ethereum-cryptography/utils'
 import {sign} from 'ethereum-cryptography/secp256k1'
+import toast, { Toaster } from 'react-hot-toast';
 
 function hashMessage (message) {
   return keccak256(utf8ToBytes(message))
@@ -54,8 +55,6 @@ function Input ({ id, value, type, onChange, max }) {
 
 function App() {
   const [isLoading, setIsLoading] = useState(true)
-  const [balance, setBalance] = useState(0);
-  const [address, setAddress] = useState("");
 
   const [sender, setSender] = useState()
   const [recipient, setRecipient] = useState()
@@ -88,9 +87,7 @@ function App() {
 
     const [signature, recoveryBit] = await signMessage(`${recipientPublicKey}${amount}`, sender)
 
-    console.log(toHex(signature))
-
-    console.log(`recipient: ${recipientPublicKey}. amount: ${amount}. signature: ${signature}`)
+    console.log(`Sending data to server:\n--------------------\nrecipient: ${recipientPublicKey}\namount: ${amount}\nsignature: ${ toHex(signature)}\nrecovery bit: ${recoveryBit}`)
 
     const { data } = await server.post('/send', {
       recipient: recipientPublicKey,
@@ -98,7 +95,9 @@ function App() {
       signature: toHex(signature),
       recoveryBit
     })
+
     setIsLoading(false)
+    toast.success(`Successfully sent ${data.amount}`)
   }
 
   const _getPublicInfoFromAddress = (addr) => {
@@ -170,23 +169,9 @@ function App() {
 
         <button className="w-full block rounded-lg text-sm font-semibold py-3.5 bg-emerald-600 hover:bg-emerald-500 text-gray-200 hover:text-white transition shadow-sm text-shadow" onClick={submit}>Send funds</button>
       </div>
+      <Toaster />
     </div>
   )
-
-  return (
-    <div className="app">
-      <div className="container">
-        Addresses
-      </div>
-      <Wallet
-        balance={balance}
-        setBalance={setBalance}
-        address={address}
-        setAddress={setAddress}
-      />
-      <Transfer setBalance={setBalance} address={address} />
-    </div>
-  );
 }
 
 export default App;

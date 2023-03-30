@@ -59,34 +59,30 @@ app.get("/balance/:address", (req, res) => {
 app.post("/send", async (req, res) => {
   const { recipient, amount, signature, recoveryBit } = req.body;
 
-  console.log(signature)
-
   const recovered = await recoverPublicKey(hashMessage(`${recipient}${amount}`), signature, recoveryBit)
   const senderKey = `0x${toHex(recovered).slice(-20)}`
 
   var sender;
+
   for (let x = 0; x < wallets.length; x++) {
     if (wallets[x].publicKey === senderKey) {
-      sender = wallets[x]
-      if (amount > sender.balance) {
+      if (amount > wallets[x].balance) {
         return res.status(400).send({ message: 'not enough funds' })
       }
       wallets[x].balance -= amount;
+      sender = wallets[x]
     }
+  }
 
+  for (let x = 0; x < wallets.length; x++) {
     if (wallets[x].publicKey === recipient) {
       wallets[x].balance += amount;
     }
-    return res.send({ balance: sender?.balance })
   }
+
+  return res.send({ balance: sender?.balance, amount })
 });
 
 app.listen(port, () => {
   console.log(`Listening on port ${port}!`);
 });
-
-function setInitialBalance(address) {
-  if (!balances[address]) {
-    balances[address] = 0;
-  }
-}
