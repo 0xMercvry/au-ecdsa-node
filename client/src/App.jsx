@@ -88,15 +88,17 @@ function App() {
 
     const [signature, recoveryBit] = await signMessage(`${recipientPublicKey}${amount}`, sender)
 
+    console.log(toHex(signature))
+
     console.log(`recipient: ${recipientPublicKey}. amount: ${amount}. signature: ${signature}`)
 
     const { data } = await server.post('/send', {
       recipient: recipientPublicKey,
       amount,
-      signature,
+      signature: toHex(signature),
       recoveryBit
     })
-    console.log(data)
+    setIsLoading(false)
   }
 
   const _getPublicInfoFromAddress = (addr) => {

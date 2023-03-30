@@ -2,8 +2,8 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const { keccak256 } = require('ethereum-cryptography/keccak');
-const { utf8ToBytes } = require('ethereum-cryptography/utils');
-const { sign, recoverPublicKey } = require('ethereum-cryptography/secp256k1');
+const { utf8ToBytes, toHex } = require('ethereum-cryptography/utils');
+const { recoverPublicKey } = require('ethereum-cryptography/secp256k1');
 const port = 3042;
 
 app.use(cors());
@@ -41,20 +41,6 @@ function hashMessage (message) {
   return keccak256(utf8ToBytes(message))
 }
 
-async function signMessage (message, privateKey) {
-  const hash = hashMessage(message)
-  return await sign(hash, privateKey, { recovered: true })
-}
-
-function getBalanceFromAddress (address) {
-  for (let x = 0; x < wallets.length; x++) {
-    if (wallets[x].publicKey === address) {
-      return wallets[x].balance
-    }
-  }
-}
- 
-
 app.get('/wallets', (req, res) => {
   return res.send(wallets)
 })
@@ -71,25 +57,28 @@ app.get("/balance/:address", (req, res) => {
 });
 
 app.post("/send", async (req, res) => {
-  const { sender, recipient, amount, signature, recoveryBit } = req.body;
+  const { recipient, amount, signature, recoveryBit } = req.body;
 
   console.log(signature)
 
   const recovered = await recoverPublicKey(hashMessage(`${recipient}${amount}`), signature, recoveryBit)
+  const senderKey = `0x${toHex(recovered).slice(-20)}`
 
-  console.log(`Got recovered publicKey: ${recovered}`);
+  var sender;
+  for (let x = 0; x < wallets.length; x++) {
+    if (wallets[x].publicKey === senderKey) {
+      sender = wallets[x]
+      if (amount > sender.balance) {
+        return res.status(400).send({ message: 'not enough funds' })
+      }
+      wallets[x].balance -= amount;
+    }
 
-  if (getBalanceFromAddress(recovered) >= amount) {
-
+    if (wallets[x].publicKey === recipient) {
+      wallets[x].balance += amount;
+    }
+    return res.send({ balance: sender?.balance })
   }
-
-  // if (balances[sender] < amount) {
-  //   res.status(400).send({ message: "Not enough funds!" });
-  // } else {
-  //   balances[sender] -= amount;
-  //   balances[recipient] += amount;
-  //   res.send({ balance: balances[sender] });
-  // }
 });
 
 app.listen(port, () => {
