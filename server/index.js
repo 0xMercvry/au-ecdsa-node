@@ -67,7 +67,7 @@ app.post("/send", async (req, res) => {
   for (let x = 0; x < wallets.length; x++) {
     if (wallets[x].publicKey === senderKey) {
       if (amount > wallets[x].balance) {
-        return res.status(400).send({ message: 'not enough funds' })
+        return res.status(400).send({ error: 'not enough funds' })
       }
       wallets[x].balance -= amount;
       sender = wallets[x]
